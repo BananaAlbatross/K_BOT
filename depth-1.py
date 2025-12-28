@@ -1,6 +1,5 @@
 import chess
 import random
-import re
 
 play = True
 
