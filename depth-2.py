@@ -1,8 +1,10 @@
 import chess
+import time
 
-play = True
-
+PLAY = True
 board = chess.Board()
+DEPTH = 4
+move_times = []
 
 def evaluate(board):
     score = 0
@@ -20,16 +22,41 @@ def evaluate(board):
         score -= scores[i] * len(board.pieces(i, False)) # False is black
     return score
 
-if play:
+def minimax(board, depth):
+
+    if depth == 0 or board.is_game_over():
+        return evaluate(board)
+    
+    else:
+        turn = board.turn
+        if turn == chess.WHITE:
+            eval = -99999
+            for move in list(board.legal_moves):
+                board.push(move)
+                eval = max(eval, minimax(board, depth-1))
+                board.pop()
+            return eval
+        else:
+            eval = 99999
+            for move in list(board.legal_moves):
+                board.push(move)
+                eval = min(eval, minimax(board, depth-1))
+                board.pop()
+            return eval
+
+if PLAY:
     while not board.is_game_over():
         turn = board.turn
         best_move = None
         highest_value = -63000 if turn else 63000
 
         legal_moves = list(board.legal_moves)
+
+        start_time = time.perf_counter()
         for i in legal_moves:
             board.push(i)
-            value = evaluate(board)
+            #value = evaluate(board)     depth-1's evaluate() got switched out for minimax()
+            value = minimax(board, DEPTH-1)
             board.pop()
             if turn:
                 if value > highest_value:
@@ -39,11 +66,16 @@ if play:
                 if value < highest_value:
                     highest_value = value
                     best_move = i
-                
+
+        end_time = time.perf_counter()
+        move_time = end_time - start_time
+        move_times.append(move_time)
+
         board.push(best_move)
         print(board)
         print()
 
     print("GG " + board.result())
 
+print("Average move time: " + str(round(sum(move_times)/len(move_times), 5)) + " s")
 
