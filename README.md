@@ -1,2 +1,2 @@
 # K_BOT
-A chess bot created for a school project.
+Chess bots created for a school project.
