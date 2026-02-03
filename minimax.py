@@ -5,6 +5,8 @@ PLAY = True
 board = chess.Board()
 DEPTH = 4
 move_times = []
+NEG_INF = -99999
+POS_INF = 99999
 
 scores = {
         chess.PAWN: 100,
@@ -32,14 +34,14 @@ def minimax(board, depth):
     else:
         turn = board.turn
         if turn == chess.WHITE:
-            eval = -99999
+            eval = NEG_INF
             for move in list(board.legal_moves):
                 board.push(move)
                 eval = max(eval, minimax(board, depth-1))
                 board.pop()
             return eval
         else:
-            eval = 99999
+            eval = POS_INF
             for move in list(board.legal_moves):
                 board.push(move)
                 eval = min(eval, minimax(board, depth-1))
@@ -50,7 +52,7 @@ if PLAY:
     while not board.is_game_over():
         turn = board.turn
         best_move = None
-        highest_value = -63000 if turn else 63000
+        highest_value = NEG_INF if turn else POS_INF
 
         legal_moves = list(board.legal_moves)
 

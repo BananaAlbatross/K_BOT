@@ -7,6 +7,13 @@ board = chess.Board()
 DEPTH = 5
 move_times = []
 DELTA = 10
+MATE_SCORE = 100000
+TRUE_RANDOM = False
+NEG_INF = -99999
+POS_INF = 99999
+
+if not TRUE_RANDOM:
+    random.seed(12345)
 
 SCORES = {
     # AlphaZero (2020) piece values
@@ -194,12 +201,18 @@ def evaluate(board):
         for square in board.pieces(i, False):
             score -= (PST_MG[i][chess.square_mirror(square)] * phase + PST_EG[i][chess.square_mirror(square)] * (1-phase))
 
-    return round(score)
+    return int(round(score))
 
 
 
 def minimax(board, depth, alpha, beta):
 
+    if board.is_checkmate():
+        return -MATE_SCORE if board.turn == chess.WHITE else MATE_SCORE
+    
+    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves():
+        return 0
+    
     if depth == 0 or board.is_game_over():
         return evaluate(board)
     
@@ -207,7 +220,8 @@ def minimax(board, depth, alpha, beta):
         turn = board.turn
 
         if turn == chess.WHITE:
-            best_eval = -99999
+            best_eval = NEG_INF
+            
             for move in list(board.legal_moves):
                 board.push(move)
                 best_eval = max(best_eval, minimax(board, depth-1, alpha, beta))
@@ -216,10 +230,12 @@ def minimax(board, depth, alpha, beta):
 
                 if beta <= alpha:
                     break
+
             return best_eval
         
         else:
-            best_eval = 99999
+            best_eval = POS_INF
+
             for move in list(board.legal_moves):
                 board.push(move)
                 best_eval = min(best_eval, minimax(board, depth-1, alpha, beta))
@@ -228,6 +244,7 @@ def minimax(board, depth, alpha, beta):
                 
                 if beta <= alpha:
                     break
+
             return best_eval
 
 
@@ -235,8 +252,8 @@ def minimax(board, depth, alpha, beta):
 while not board.is_game_over():
     turn = board.turn
     best_move = None
-    alpha = -99999
-    beta = 99999
+    alpha = NEG_INF
+    beta = POS_INF
 
     legal_moves = list(board.legal_moves)
     move_values = []

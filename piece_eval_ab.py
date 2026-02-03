@@ -6,6 +6,8 @@ board = chess.Board()
 DEPTH = 5
 move_times = []
 MATE_SCORE = 100000
+NEG_INF = -99999
+POS_INF = 99999
 
 scores = {
     # AlphaZero (2020) piece values
@@ -44,7 +46,8 @@ def minimax(board, depth, alpha, beta):
         turn = board.turn
 
         if turn == chess.WHITE:
-            best_eval = -99999
+            best_eval = NEG_INF
+
             for move in list(board.legal_moves):
                 board.push(move)
                 best_eval = max(best_eval, minimax(board, depth-1, alpha, beta))
@@ -53,10 +56,12 @@ def minimax(board, depth, alpha, beta):
 
                 if beta <= alpha:
                     break
+
             return best_eval
         
         else:
-            best_eval = 99999
+            best_eval = POS_INF
+            
             for move in list(board.legal_moves):
                 board.push(move)
                 best_eval = min(best_eval, minimax(board, depth-1, alpha, beta))
@@ -65,6 +70,7 @@ def minimax(board, depth, alpha, beta):
                 
                 if beta <= alpha:
                     break
+                
             return best_eval
 
 
@@ -72,9 +78,9 @@ def minimax(board, depth, alpha, beta):
 while not board.is_game_over():
     turn = board.turn
     best_move = None
-    highest_value = -63000 if turn else 63000
-    alpha = -99999
-    beta = 99999
+    highest_value = NEG_INF if turn else POS_INF
+    alpha = NEG_INF
+    beta = POS_INF
 
     legal_moves = list(board.legal_moves)
 

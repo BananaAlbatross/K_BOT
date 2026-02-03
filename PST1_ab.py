@@ -1,10 +1,14 @@
 import chess
 import time
 
+from K_BOT.PST2_ab import MATE_SCORE
+
 PLAY = True
 board = chess.Board()
 DEPTH = 5
 move_times = []
+NEG_INF = -99999
+POS_INF = 99999
 
 SCORES = {
     # AlphaZero (2020) piece values
@@ -86,13 +90,19 @@ def evaluate(board):
             score += PST[i][square]
         for square in board.pieces(i, False):
             score -= PST[i][chess.square_mirror(square)]
-    return score
+    return int(round(score))
 
 
 
 
 def minimax(board, depth, alpha, beta):
 
+    if board.is_checkmate():
+        return -MATE_SCORE if board.turn == chess.WHITE else MATE_SCORE
+
+    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves():
+        return 0
+    
     if depth == 0 or board.is_game_over():
         return evaluate(board)
     
@@ -100,37 +110,41 @@ def minimax(board, depth, alpha, beta):
         turn = board.turn
 
         if turn == chess.WHITE:
-            eval = -99999
+            best_eval = NEG_INF
+
             for move in list(board.legal_moves):
                 board.push(move)
-                eval = max(eval, minimax(board, depth-1, alpha, beta))
+                eval = max(best_eval, minimax(board, depth-1, alpha, beta))
                 board.pop()
-                alpha = max(alpha, eval)
+                alpha = max(alpha, best_eval)
 
                 if beta <= alpha:
                     break
-            return eval
+                
+            return best_eval
         
         else:
-            eval = 99999
+            best_eval = POS_INF
+
             for move in list(board.legal_moves):
                 board.push(move)
-                eval = min(eval, minimax(board, depth-1, alpha, beta))
+                best_eval = min(best_eval, minimax(board, depth-1, alpha, beta))
                 board.pop()
-                beta = min(beta, eval)
+                beta = min(beta, best_eval)
                 
                 if beta <= alpha:
                     break
-            return eval
+
+            return best_eval
 
 
 
 while not board.is_game_over():
     turn = board.turn
     best_move = None
-    highest_value = -63000 if turn else 63000
-    alpha = -63000
-    beta = 63000
+    highest_value = NEG_INF if turn else POS_INF
+    alpha = NEG_INF
+    beta = POS_INF
 
     legal_moves = list(board.legal_moves)
 
@@ -144,10 +158,15 @@ while not board.is_game_over():
             if value > highest_value:
                 highest_value = value
                 best_move = i
+            if value > alpha:
+                alpha = value
+
         else:
             if value < highest_value:
                 highest_value = value
                 best_move = i
+            if value < beta:
+                beta = value
 
     """
     end_time = time.perf_counter()
