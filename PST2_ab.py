@@ -1,17 +1,20 @@
 import chess
 import time
+import random
 
 PLAY = True
 board = chess.Board()
 DEPTH = 5
 move_times = []
+DELTA = 10
 
-scores = {
+SCORES = {
+    # AlphaZero (2020) piece values
         chess.PAWN: 100,
-        chess.KNIGHT: 300,
-        chess.BISHOP: 300,
-        chess.ROOK: 500,
-        chess.QUEEN: 900,
+        chess.KNIGHT: 305,
+        chess.BISHOP: 333,
+        chess.ROOK: 563,
+        chess.QUEEN: 950,
         chess.KING: 30000
     }
 
@@ -152,22 +155,46 @@ PST_EG = {
     ),
 }
 
+PHASE_SCORES = {
+    chess.PAWN: 0,
+    chess.KNIGHT: 1,
+    chess.BISHOP: 1,
+    chess.ROOK: 2,
+    chess.QUEEN: 4,
+    chess.KING: 0
+} # Max phase is 8*0 + 4*1 + 4*1 + 4*2 + 2*4 + 2*0 = 24 (with promotion exceptions)
+
 def evaluate(board):
     score = 0
+    phase = 0
+
+    # Count pieces, calculate phase, increment score
+    for i in SCORES:
+        
+        # Count of piece type i
+        whiteCount = len(board.pieces(i, True))
+        blackCount = len(board.pieces(i, False))
+
+        # Phase sum
+        phase += PHASE_SCORES[i] * (whiteCount + blackCount)
     
-    # Count pieces and increment score
-    for i in scores:
         # Score Table
-        score += scores[i] * len(board.pieces(i, True)) # True is white
-        score -= scores[i] * len(board.pieces(i, False)) # False is black
-        # Piece-Square Table
+        score += SCORES[i] * whiteCount # True is white
+        score -= SCORES[i] * blackCount # False is black
+    
+    # Phase mapping to interval [0, 1]
+    phase = max(0, min(1, phase/24))
 
+    # Piece-Square Table
+    for i in SCORES:
+        # White pieces
         for square in board.pieces(i, True):
-            score += PST[i][square]
+            score += (PST_MG[i][square] * phase + PST_EG[i][square] * (1-phase))
+        # Black pieces
         for square in board.pieces(i, False):
-            score -= PST[i][chess.square_mirror(square)]
-    return score
+            score -= (PST_MG[i][chess.square_mirror(square)] * phase + PST_EG[i][chess.square_mirror(square)] * (1-phase))
 
+    return round(score)
 
 
 
@@ -180,66 +207,70 @@ def minimax(board, depth, alpha, beta):
         turn = board.turn
 
         if turn == chess.WHITE:
-            eval = -99999
+            best_eval = -99999
             for move in list(board.legal_moves):
                 board.push(move)
-                eval = max(eval, minimax(board, depth-1, alpha, beta))
+                best_eval = max(best_eval, minimax(board, depth-1, alpha, beta))
                 board.pop()
-                alpha = max(alpha, eval)
+                alpha = max(alpha, best_eval)
 
                 if beta <= alpha:
                     break
-            return eval
+            return best_eval
         
         else:
-            eval = 99999
+            best_eval = 99999
             for move in list(board.legal_moves):
                 board.push(move)
-                eval = min(eval, minimax(board, depth-1, alpha, beta))
+                best_eval = min(best_eval, minimax(board, depth-1, alpha, beta))
                 board.pop()
-                beta = min(beta, eval)
+                beta = min(beta, best_eval)
                 
                 if beta <= alpha:
                     break
-            return eval
+            return best_eval
 
 
 
 while not board.is_game_over():
     turn = board.turn
     best_move = None
-    highest_value = -63000 if turn else 63000
-    alpha = -63000
-    beta = 63000
+    alpha = -99999
+    beta = 99999
 
     legal_moves = list(board.legal_moves)
-
-    start_time = time.perf_counter()
+    move_values = []
+    #start_time = time.perf_counter()
     for i in legal_moves:
         board.push(i)
-        #value = evaluate(board)     depth-1's evaluate() got switched out for minimax()
         value = minimax(board, DEPTH-1, alpha, beta)
         board.pop()
-        if turn:
-            if value > highest_value:
-                highest_value = value
-                best_move = i
-            alpha = max(alpha, value)
-        else:
-            if value < highest_value:
-                highest_value = value
-                best_move = i
-            beta = min(beta, value)
+        move_values.append((i, value))
 
+    if turn:
+        # Potential moves for white (to turn)
+        highest_value = max(move_values, key=lambda x: x[1])[1]
+        potential_moves = [move for (move, value) in move_values if value >= highest_value - DELTA]
+    else:
+        # Potential moves for black (to turn)
+        highest_value = min(move_values, key=lambda x: x[1])[1]
+        potential_moves = [move for (move, value) in move_values if value <= highest_value + DELTA]
+    """
     end_time = time.perf_counter()
     move_time = end_time - start_time
     move_times.append(move_time)
-
-    board.push(best_move)
+    """
+    if not potential_moves:
+        if turn:
+            board.push(max(move_values, key=lambda x: x[1])[0])
+        else:
+            board.push(min(move_values, key=lambda x: x[1])[0])
+    else: 
+        board.push(random.choice(potential_moves))
     print(board)
     print()
 
 print("GG " + board.result())
 
-print("Average move time: " + str(round(sum(move_times)/len(move_times), 5)) + " s")
+#print("Average move time: " + str(round(sum(move_times)/len(move_times), 5)) + " s")
 

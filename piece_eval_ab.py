@@ -5,6 +5,7 @@ PLAY = True
 board = chess.Board()
 DEPTH = 5
 move_times = []
+MATE_SCORE = 100000
 
 scores = {
     # AlphaZero (2020) piece values
@@ -30,35 +31,41 @@ def evaluate(board):
 
 def minimax(board, depth, alpha, beta):
 
-    if depth == 0 or board.is_game_over():
+    if board.is_checkmate():
+        return -MATE_SCORE if board.turn == chess.WHITE else MATE_SCORE
+
+    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves():
+        return 0
+    
+    if depth == 0:
         return evaluate(board)
     
     else:
         turn = board.turn
 
         if turn == chess.WHITE:
-            eval = -99999
+            best_eval = -99999
             for move in list(board.legal_moves):
                 board.push(move)
-                eval = max(eval, minimax(board, depth-1, alpha, beta))
+                best_eval = max(best_eval, minimax(board, depth-1, alpha, beta))
                 board.pop()
-                alpha = max(alpha, eval)
+                alpha = max(alpha, best_eval)
 
                 if beta <= alpha:
                     break
-            return eval
+            return best_eval
         
         else:
-            eval = 99999
+            best_eval = 99999
             for move in list(board.legal_moves):
                 board.push(move)
-                eval = min(eval, minimax(board, depth-1, alpha, beta))
+                best_eval = min(best_eval, minimax(board, depth-1, alpha, beta))
                 board.pop()
-                beta = min(beta, eval)
+                beta = min(beta, best_eval)
                 
                 if beta <= alpha:
                     break
-            return eval
+            return best_eval
 
 
 
@@ -66,8 +73,8 @@ while not board.is_game_over():
     turn = board.turn
     best_move = None
     highest_value = -63000 if turn else 63000
-    alpha = -63000
-    beta = 63000
+    alpha = -99999
+    beta = 99999
 
     legal_moves = list(board.legal_moves)
 
@@ -77,16 +84,16 @@ while not board.is_game_over():
         #value = evaluate(board)     depth-1's evaluate() got switched out for minimax()
         value = minimax(board, DEPTH-1, alpha, beta)
         board.pop()
+
         if turn:
             if value > highest_value:
                 highest_value = value
                 best_move = i
-            alpha = max(alpha, value)
         else:
             if value < highest_value:
                 highest_value = value
                 best_move = i
-            beta = min(beta, value)
+
     """
     end_time = time.perf_counter()
     move_time = end_time - start_time

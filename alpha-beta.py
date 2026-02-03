@@ -64,38 +64,38 @@ def minimax(board, depth, alpha, beta):
 while not board.is_game_over():
     turn = board.turn
     best_move = None
-    highest_value = -63000 if turn else 63000
-    alpha = -63000
-    beta = 63000
+    alpha = -99999
+    beta = 99999
 
     legal_moves = list(board.legal_moves)
 
-    start_time = time.perf_counter()
+    #start_time = time.perf_counter()
     for i in legal_moves:
         board.push(i)
         #value = evaluate(board)     depth-1's evaluate() got switched out for minimax()
         value = minimax(board, DEPTH-1, alpha, beta)
         board.pop()
+
         if turn:
             if value > highest_value:
                 highest_value = value
                 best_move = i
-            alpha = max(alpha, value)
         else:
             if value < highest_value:
                 highest_value = value
                 best_move = i
-            beta = min(beta, value)
-
+                
+    """
     end_time = time.perf_counter()
     move_time = end_time - start_time
     move_times.append(move_time)
-
+    """
     board.push(best_move)
     print(board)
     print()
 
+
 print("GG " + board.result())
 
-print("Average move time: " + str(round(sum(move_times)/len(move_times), 5)) + " s")
+#print("Average move time: " + str(round(sum(move_times)/len(move_times), 5)) + " s")
 
