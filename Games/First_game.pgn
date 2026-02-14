@@ -1,0 +1,26 @@
+[Event "Computer chess game"]
+[Site "MSI"]
+[Date "2026.02.03"]
+[Round "?"]
+[White "Kaare"]
+[Black "Uci_bot1"]
+[Result "0-1"]
+[BlackElo "2000"]
+[ECO "B00"]
+[Opening "Reversed Grob (Borg/Basman Defence)"]
+[Time "18:49:52"]
+[WhiteElo "2400"]
+[Termination "normal"]
+[PlyCount "96"]
+[WhiteType "human"]
+[BlackType "program"]
+
+1. e4 g5 2. d4 Nf6 3. a3 Nxe4 4. Bd3 Nd6 5. Bxg5 Bg7 6. Nf3 O-O 7. Bxe7
+Qxe7+ 8. Qe2 Qxe2+ 9. Bxe2 Rd8 10. O-O h5 11. Ne5 Nc6 12. Bxh5 Nxd4 13. c3
+Bxe5 14. cxd4 Bg7 15. Re1 f5 16. Bf3 Kf7 17. Nc3 Bxd4 18. b4 Bxc3 19. Rad1
+Bxe1 20. Rxe1 Nb5 21. Bd5+ Kg6 22. a4 Nc3 23. Bb3 Ne4 24. Bc2 Nd2 25. Rd1
+Nc4 26. Bb3 Ne5 27. Rd5 d6 28. h4 Ng4 29. f3 Nf6 30. Rd4 a5 31. b5 d5 32.
+g4 fxg4 33. fxg4 Be6 34. h5+ Kg5 35. Rd3 Kxg4 36. Bd1+ Kg5 37. Rg3+ Ng4 38.
+Kg2 Kxh5 39. Kh3 Kg5 40. Bxg4 Rh8+ 41. Kg2 Bxg4 42. Rxg4+ Kxg4 43. Kf2 Rae8
+44. Kf1 Kf3 45. Kg1 Rh6 46. Kf1 Rh7 47. Kg1 Re6 48. b6 Re1# 0-1
+
