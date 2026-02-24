@@ -1,3 +1,6 @@
+import random
+import sys
+import chess.polyglot
 import chess
 import time
 import itertools
@@ -5,13 +8,17 @@ import itertools
 # ------------- Definitions / Constants -------------
 
 PLAY = True
-DEPTH = 5
+DEPTH = 7
 MATE_SCORE = 100000
 NEG_INF = -99999
 POS_INF = 99999
 board = chess.Board()
 move_times = []
 TT = {}
+
+CHOSEN_BOT = "B4"
+#1, 2, 3, 4 -- default minimax, mvv_lva, iterative deepening, transposition table
+#A, B, C -- eval_material, eval_PST1, eval_PST2
 
 SCORES = {
     # AlphaZero (2020) piece values
@@ -227,7 +234,7 @@ def eval_PST2(board):
         score -= SCORES[i] * blackCount # False is black
     
     # Phase mapping to interval [0, 1]
-    mg_phase = max(0, min(1, phase/24))
+    mg_phase = max(0, min(1, phase/24.0))
     eg_phase = 1 - mg_phase
 
     for piece_type in SCORES:
@@ -287,7 +294,7 @@ def default_minimax(board, depth, alpha, beta, evaluator, start_time, time_limit
 
     if board.is_checkmate():
         return -MATE_SCORE if board.turn == chess.WHITE else MATE_SCORE
-    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves():
+    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves() or board.is_repetition(2):
         return 0
     if depth == 0 or board.is_game_over():
         return quiescence(board, alpha, beta, evaluator, start_time, time_limit)
@@ -321,7 +328,7 @@ def default_minimax(board, depth, alpha, beta, evaluator, start_time, time_limit
 
 def minimax_select_move(board, depth, evaluator, time_limit):
     start_time = time.time()
-    time_limit -= 0.05 #buffer
+    time_limit *= 0.95 #buffer
     
     best_move = None
     turn = board.turn
@@ -357,6 +364,19 @@ def minimax_select_move(board, depth, evaluator, time_limit):
 
 #--------------------------------------------------------
 
+def iterative_deepening_order_moves(board, best_move_from_prev_depth=None):
+    moves = list(board.legal_moves)
+    
+    def score_move(move):
+        #Prioritise the best move from the previous iteration
+        if best_move_from_prev_depth and move == best_move_from_prev_depth:
+            return 1000000 
+        
+        return mvv_lva_score(board, move)
+
+    moves.sort(key=score_move, reverse=True)
+    return moves
+
 def iterative_deepening_minimax(board, depth, alpha, beta, evaluator, start_time, time_limit):
     #Check time every position
     if time.time() - start_time > time_limit:
@@ -364,7 +384,7 @@ def iterative_deepening_minimax(board, depth, alpha, beta, evaluator, start_time
 
     if board.is_checkmate():
         return -MATE_SCORE if board.turn == chess.WHITE else MATE_SCORE
-    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves():
+    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves() or board.is_repetition(2):
         return 0
     if depth == 0 or board.is_game_over():
         return quiescence(board, alpha, beta, evaluator, start_time, time_limit)
@@ -390,14 +410,16 @@ def iterative_deepening_minimax(board, depth, alpha, beta, evaluator, start_time
                 break
         return value
 
-def iterative_deepening_fixed_depth_search(board, depth, evaluator, start_time, time_limit):
+def iterative_deepening_fixed_depth_search(board, depth, evaluator, start_time, time_limit, prev_best):
     best_move = None
     turn = board.turn
     alpha = NEG_INF
     beta = POS_INF
     best_value = NEG_INF if turn else POS_INF
 
-    for move in board.legal_moves:
+    ordered_moves = iterative_deepening_order_moves(board, prev_best)
+
+    for move in ordered_moves:
         if time.time() - start_time > time_limit:
             raise SearchTimeout()
             
@@ -422,13 +444,16 @@ def iterative_deepening_fixed_depth_search(board, depth, evaluator, start_time, 
 
 def iterative_deepening_search(board, depth, evaluator, time_limit):
     start_time = time.time()
-    time_limit -= 0.05 #buffer
+    time_limit *= 0.95 #buffer
     best_move_found = None
     
     #Iterative deepening
     try:
-        for d in range(1, depth + 1):
-            result = iterative_deepening_fixed_depth_search(board, d, evaluator, start_time, time_limit)
+        #Guaranteed depth 1
+        best_move_found = iterative_deepening_fixed_depth_search(board, 1, evaluator, start_time, 999, None)
+        
+        for d in range(2, depth + 1):
+            result = iterative_deepening_fixed_depth_search(board, d, evaluator, start_time, time_limit, best_move_found)
             if result:
                 best_move_found = result
     except SearchTimeout:
@@ -463,7 +488,7 @@ def mvv_lva_minimax(board, depth, alpha, beta, evaluator, start_time, time_limit
 
     if board.is_checkmate():
         return -MATE_SCORE if board.turn == chess.WHITE else MATE_SCORE
-    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves():
+    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves() or board.is_repetition(2):
         return 0
     if depth == 0 or board.is_game_over():
         return quiescence(board, alpha, beta, evaluator, start_time, time_limit)
@@ -500,7 +525,7 @@ def mvv_lva_minimax(board, depth, alpha, beta, evaluator, start_time, time_limit
 
 def mvv_lva_select_move(board, depth, evaluator, time_limit):
     start_time = time.time()
-    time_limit -= 0.05 #buffer
+    time_limit *= 0.95 #buffer
     
     best_move = None
     turn = board.turn
@@ -537,49 +562,66 @@ def mvv_lva_select_move(board, depth, evaluator, time_limit):
 
 #--------------------------------------------------------
 
-def tt_lookup(board, depth):
-    key = board.zobrist_key()
-    entry = TT.get(key)
-    if not entry:
-        return None
-    stored_depth, score = entry
+def tt_get_ordered_moves(board, tt_move=None):
+    moves = list(board.legal_moves)
     
-    if stored_depth >= depth:
-        return score
-    return None
+    def score_move(move):
+        if move == tt_move:
+            return 1000000
+        if board.is_capture(move):
+            return mvv_lva_score(board, move)
+        return 0
 
-def tt_store(board, depth, score):
-    key = board.zobrist_key()
-    TT[key] = (depth, score)
+    moves.sort(key=score_move, reverse=True)
+    return moves
+
+def tt_lookup(board, depth):
+    key = chess.polyglot.zobrist_hash(board)
+    entry = TT.get(key)
+    if entry:
+        stored_depth, score, move = entry
+        if stored_depth >= depth:
+            return score, move
+        return None, move
+    return None, None
+
+def tt_store(board, depth, score, move):
+    key = chess.polyglot.zobrist_hash(board)
+    if key not in TT or TT[key][0] < depth:
+        TT[key] = (depth, score, move)
 
 def transposition_table_minimax(board, depth, alpha, beta, evaluator, start_time, time_limit):
+    best_move_at_node = None
     # Time Check
     if time.time() - start_time > time_limit:
         raise SearchTimeout()
 
     #TT
-    stored_score = tt_lookup(board, depth)
+    stored_score, tt_move = tt_lookup(board, depth)
     if stored_score is not None:
         return stored_score
 
     #Case check
     if board.is_checkmate():
         return -MATE_SCORE if board.turn == chess.WHITE else MATE_SCORE
-    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves():
+    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_fifty_moves() or board.is_repetition(2):
         return 0
     if depth == 0 or board.is_game_over():
         val = quiescence(board, alpha, beta, evaluator, start_time, time_limit)
-        tt_store(board, depth, val)
         return val
+
+    ordered_moves = tt_get_ordered_moves(board, tt_move)
 
     #Search
     if board.turn == chess.WHITE:
         value = NEG_INF
-        for move in board.legal_moves:
+        for move in ordered_moves:
             board.push(move)
             try:
                 res = transposition_table_minimax(board, depth - 1, alpha, beta, evaluator, start_time, time_limit)
-                value = max(value, res)
+                if res > value:
+                    value = res
+                    best_move_at_node = move
             finally:
                 board.pop()
             alpha = max(alpha, value)
@@ -587,11 +629,13 @@ def transposition_table_minimax(board, depth, alpha, beta, evaluator, start_time
                 break
     else:
         value = POS_INF
-        for move in board.legal_moves:
+        for move in ordered_moves:
             board.push(move)
             try:
                 res = transposition_table_minimax(board, depth - 1, alpha, beta, evaluator, start_time, time_limit)
-                value = min(value, res)
+                if res < value:
+                    value = res
+                    best_move_at_node = move # Store the move that produced the best score
             finally:
                 board.pop()
             beta = min(beta, value)
@@ -599,42 +643,92 @@ def transposition_table_minimax(board, depth, alpha, beta, evaluator, start_time
                 break
     
     #TT store
-    tt_store(board, depth, value)
+    tt_store(board, depth, value, best_move_at_node)
     return value
 
-def transposition_table_select_move(board, depth, evaluator, time_limit):
+def transposition_table_select_move(board, max_depth, evaluator, time_limit):
     start_time = time.time()
-    time_limit -= 0.05 #buffer
-    
+    time_limit *= 0.95 #buffer
     best_move = None
     turn = board.turn
-    alpha = NEG_INF
-    beta = POS_INF
-    best_value = NEG_INF if turn else POS_INF
 
-    try:
-        for move in board.legal_moves:
-            board.push(move)
-            try:
-                val = transposition_table_minimax(board, depth - 1, alpha, beta, evaluator, start_time, time_limit)
-            finally:
-                board.pop()
+    ITERATIVE_DEEPENING = True
+    
+    if ITERATIVE_DEEPENING:
+        try:
+            # Iterative Deepening Loop
+            for depth in range(1, max_depth + 1):
+                alpha = NEG_INF
+                beta = POS_INF
+                best_value = NEG_INF if turn else POS_INF
+                best_move_this_depth = None
 
-            if turn:
-                if val > best_value:
-                    best_value = val
-                    best_move = move
-                alpha = max(alpha, best_value)
-            else:
-                if val < best_value:
-                    best_value = val
-                    best_move = move
-                beta = min(beta, best_value)
+                # Lookup TT for the best move from the previous depth to order it first
+                _, tt_move = tt_lookup(board, depth)
+                ordered_moves = tt_get_ordered_moves(board, tt_move)
+
+                for move in ordered_moves:
+                    if time.time() - start_time > time_limit:
+                        raise SearchTimeout()
+                        
+                    board.push(move)
+                    try:
+                        val = transposition_table_minimax(board, depth - 1, alpha, beta, evaluator, start_time, time_limit)
+                    finally:
+                        board.pop()
+
+                    if turn: # White's turn
+                        if val > best_value:
+                            best_value = val
+                            best_move_this_depth = move
+                        alpha = max(alpha, best_value)
+                    else:    # Black's turn
+                        if val < best_value:
+                            best_value = val
+                            best_move_this_depth = move
+                        beta = min(beta, best_value)
                 
-    except SearchTimeout:
-        pass
+                if best_move_this_depth is not None:
+                    best_move_overall = best_move_this_depth
+                    # Store the root position evaluation in the TT for the next iteration
+                    tt_store(board, depth, best_value, best_move_overall)
+                    
+        except SearchTimeout:
+            pass
 
-    return best_move if best_move is not None else next(iter(board.legal_moves))
+        return best_move_overall if best_move_overall is not None else next(iter(board.legal_moves))
+    else:
+
+        alpha = NEG_INF
+        beta = POS_INF
+        best_value = NEG_INF if turn else POS_INF
+
+        _, good_move = tt_lookup(board, max_depth)
+        ordered_moves = tt_get_ordered_moves(board, good_move)
+
+        try:
+            for move in ordered_moves:
+                board.push(move)
+                try:
+                    val = transposition_table_minimax(board, max_depth - 1, alpha, beta, evaluator, start_time, time_limit)
+                finally:
+                    board.pop()
+
+                if turn:
+                    if val > best_value:
+                        best_value = val
+                        best_move = move
+                    alpha = max(alpha, best_value)
+                else:
+                    if val < best_value:
+                        best_value = val
+                        best_move = move
+                    beta = min(beta, best_value)
+                    
+        except SearchTimeout:
+            pass
+
+        return best_move if best_move is not None else next(iter(board.legal_moves))
 
 
 #-------------------------- ChessBot Class ------------------------------
@@ -668,6 +762,26 @@ bot_C2 = ChessBot("C2", mvv_lva_select_move, eval_PST2)
 bot_C3 = ChessBot("C3", iterative_deepening_search, eval_PST2)
 bot_C4 = ChessBot("C4", transposition_table_select_move, eval_PST2)
 
+def get_move(bot_name, board, time_limit):
+    bot_map = {
+        "A1": bot_A1,
+        "A2": bot_A2,
+        "A3": bot_A3,
+        "A4": bot_A4,
+        "B1": bot_B1,
+        "B2": bot_B2,
+        "B3": bot_B3,
+        "B4": bot_B4,
+        "C1": bot_C1,
+        "C2": bot_C2,
+        "C3": bot_C3,
+        "C4": bot_C4
+    }
+    bot = bot_map.get(bot_name)
+    if not bot:
+        raise ValueError(f"Unknown bot name: {bot_name}")
+    return bot.select_move(board, time_limit)
+"""
 bots = [bot_A1, bot_A2, bot_A3, bot_A4, bot_B1, bot_B2, bot_B3, bot_B4, bot_C1, bot_C2, bot_C3, bot_C4]
 
 class Tournament:
@@ -750,3 +864,133 @@ class Tournament:
             res = self.results[name]
             stats = f"{res['wins']}-{res['losses']}-{res['draws']}"
             print(f"{name:<20} | {round(rating):<8} | {stats}")
+
+if __name__ == "__main__":
+    chess_tournament = Tournament(bots, k_factor=32)
+
+    print(f"Tournament starting with {len(bots)} bots...")
+    print(f"Total games to be played: {len(bots) * (len(bots) - 1)}")
+    print("-" * 30)
+
+    # 2. Run the tournament
+    # You can set rounds=1 to play each matchup twice (White/Black)
+    try:
+        chess_tournament.run_round_robin(rounds=1)
+    except KeyboardInterrupt:
+        print("\nTournament paused by user. Calculating current standings...")
+
+    # 3. Output the results
+    chess_tournament.display_leaderboard()
+
+"""
+
+# ----------------- Minimal UCI interface -----------------
+
+def uci_loop():
+    global board, DEPTH, TT
+    id_name = "KaarenBot"
+    id_author = "Kaaren"
+
+    while True:
+        try:
+            line = sys.stdin.readline()
+            if not line:
+                break
+        except KeyboardInterrupt:
+            break
+
+        line = line.strip()
+        if line == "":
+            continue
+
+        parts = line.split()
+        cmd = parts[0]
+
+        if cmd == "uci":
+            print(f"id name {id_name}")
+            print(f"id author {id_author}")
+            """
+            bot_options = " var ".join(["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4"])
+            print(f"option name ChosenBot type combo default C3 var {bot_options}")
+            """
+            print("uciok")
+            sys.stdout.flush()
+
+        elif cmd == "isready":
+            print("readyok")
+            sys.stdout.flush()
+
+        elif cmd == "ucinewgame":
+            board = chess.Board()
+            TT.clear() #Reset TT
+
+        elif cmd == "position":
+            if "startpos" in parts:
+                board = chess.Board()
+            elif "fen" in parts:
+                fen_start = parts.index("fen") + 1
+                # FEN strings end where "moves" begins, or at the end of the line
+                fen_end = parts.index("moves") if "moves" in parts else len(parts)
+                fen = " ".join(parts[fen_start:fen_end])
+                board = chess.Board(fen)
+            
+            # Apply any moves sent by the GUI
+            if "moves" in parts:
+                moves_start = parts.index("moves") + 1
+                for m in parts[moves_start:]:
+                    try:
+                        board.push_uci(m)
+                    except Exception:
+                        pass
+
+        elif cmd == "go":
+            time_limit = 1.0 # Default fallback
+            
+            try:
+                if "movetime" in parts:
+                    idx = parts.index("movetime")
+                    time_limit = int(parts[idx+1]) / 1000.0
+                else:
+                    # Allocate roughly 1/30th of remaining time for this move
+                    if board.turn == chess.WHITE and "wtime" in parts:
+                        idx = parts.index("wtime")
+                        time_limit = (int(parts[idx+1]) / 1000.0) / 30.0
+                    elif board.turn == chess.BLACK and "btime" in parts:
+                        idx = parts.index("btime")
+                        time_limit = (int(parts[idx+1]) / 1000.0) / 30.0
+            except (ValueError, IndexError):
+                pass # Fallback to default if parsing fails
+
+            # Optional: Ensure time_limit isn't dangerously small
+            time_limit = max(0.1, time_limit)
+
+            best = get_move(CHOSEN_BOT, board, time_limit=time_limit)
+
+            if best is None:
+                best = random.choice(list(board.legal_moves))
+            
+            print(f"bestmove {best.uci()}")
+            sys.stdout.flush()
+
+        elif cmd == "stop":
+            pass
+
+        elif cmd == "quit":
+            break
+
+        """
+        elif cmd == "setoption":
+            if "name ChosenBot" in line:
+                try:
+                    # Extract the value after the word 'value'
+                    new_bot = line.split("value ")[1].strip()
+                    global CHOSEN_BOT
+                    CHOSEN_BOT = new_bot
+                except IndexError:
+                    pass
+        """
+
+
+
+if __name__ == "__main__":
+    uci_loop()
