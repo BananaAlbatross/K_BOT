@@ -2,12 +2,12 @@ import chess
 import time
 
 PLAY = True
-board = chess.Board()
 DEPTH = 5
-move_times = []
 MATE_SCORE = 100000
 NEG_INF = -99999
 POS_INF = 99999
+board = chess.Board()
+move_times = []
 
 scores = {
         chess.PAWN: 100,

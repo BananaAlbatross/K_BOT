@@ -312,8 +312,8 @@ def get_best_move(cur_board, depth=DEPTH):
 # ----------------- Minimal UCI interface -----------------
 def uci_loop():
     global board, DEPTH
-    id_name = "MyPythonBot"
-    id_author = "You"
+    id_name = "PythonBot1"
+    id_author = "Kaaren"
 
     print(f"id name {id_name}")
     print(f"id author {id_author}")
@@ -374,11 +374,10 @@ def uci_loop():
                 except:
                     movetime = None
 
-            # If movetime provided, we could modify depth heuristically. For now, just use DEPTH.
-            # You can implement iterative deepening + timeout later.
+            #Add time management
             start = time.time()
             best = get_best_move(board, DEPTH)
-            # When you implement iterative deepening you should respect "movetime"
+
             end = time.time()
             if best is None:
                 best = random.choice(list(board.legal_moves))
@@ -386,14 +385,12 @@ def uci_loop():
             sys.stdout.flush()
 
         elif cmd == "stop":
-            # we do no pondering and no background search in this simple engine
             pass
 
         elif cmd == "quit":
             break
 
-        # optional: support "setoption name X value Y" if you want tunable options
-    # end loop
+        #"setoption name X value Y" soovi korral
 
 if __name__ == "__main__":
     uci_loop()
