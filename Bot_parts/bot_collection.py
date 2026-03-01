@@ -20,17 +20,17 @@ print(sys.argv[1])
 # ------------- Definitions / Constants -------------
 
 PLAY = True
-TOL = 0  # Tolerance for near-best moves
+TOL = 1  # Tolerance for near-best moves
 DEPTHS = {
-    "A1": 3,
+    "A1": 2,
     "A2": 4,
     "A3": 6,
     "A4": 5,
-    "B1": 3,
+    "B1": 2,
     "B2": 4,
     "B3": 6,
     "B4": 5,
-    "C1": 3,
+    "C1": 2,
     "C2": 4,
     "C3": 6,
     "C4": 5,
@@ -198,74 +198,6 @@ PST_EG = {
     ),
 }
 
-PST_EG = {
-    chess.PAWN: (
-          0,    0,    0,    0,    0,    0,    0,    0,
-         -8,   -6,    9,    5,   16,    6,   -6,  -18,
-         -9,   -7,  -10,    5,    2,    3,   -8,   -5,
-          7,    1,   -8,   -2,  -14,  -13,  -11,   -6,
-         12,    6,    2,   -6,   -5,   -4,   14,    9,
-         27,   18,   19,   29,   30,    9,    8,   14,
-         -1,  -14,   13,   22,   24,   17,    7,    7,
-          0,    0,    0,    0,    0,    0,    0,    0,
-    ),
-
-    chess.KNIGHT: (
-         -96,  -65,  -49,  -21,  -21,  -49,  -65,  -96,
-         -67,  -54,  -18,    8,    8,  -18,  -54,  -67,
-         -40,  -27,   -8,   29,   29,   -8,  -27,  -40,
-         -35,   -2,   13,   28,   28,   13,   -2,  -35,
-         -45,  -16,    9,   39,   39,    9,  -16,  -45,
-         -51,  -44,  -16,   17,   17,  -16,  -44,  -51,
-         -69,  -50,  -51,   12,   12,  -51,  -50,  -69,
-        -100,  -88,  -56,  -17,  -17,  -56,  -88, -100,
-    ),
-
-    chess.BISHOP: (
-         -40,  -21,  -26,   -8,   -8,  -26,  -21,  -40,
-         -26,   -9,  -12,    1,    1,  -12,   -9,  -26,
-         -11,   -1,   -1,    7,    7,   -1,   -1,  -11,
-         -14,   -4,    0,   12,   12,    0,   -4,  -14,
-         -12,   -1,  -10,   11,   11,  -10,   -1,  -12,
-         -21,    4,    3,    4,    4,    3,    4,  -21,
-         -22,  -14,   -1,    1,    1,   -1,  -14,  -22,
-         -32,  -29,  -26,  -17,  -17,  -26,  -29,  -32,
-    ),
-
-    chess.ROOK: (
-         -9,  -13,  -10,   -9,   -9,  -10,  -13,   -9,
-        -12,   -9,   -1,   -2,   -2,   -1,   -9,  -12,
-          6,   -8,   -2,   -6,   -6,   -2,   -8,    6,
-         -6,    1,   -9,    7,    7,   -9,    1,   -6,
-         -5,    8,    7,   -6,   -6,    7,    8,   -5,
-          6,    1,   -7,   10,   10,   -7,    1,    6,
-          4,    5,   20,   -5,   -5,   20,    5,    4,
-         18,    0,   19,   13,   13,   19,    0,   18,
-    ),
-
-    chess.QUEEN: (
-         -69,  -57,  -47,  -26,  -26,  -47,  -57,  -69,
-         -54,  -31,  -22,   -4,   -4,  -22,  -31,  -54,
-         -39,  -18,   -9,    3,    3,   -9,  -18,  -39,
-         -23,   -3,   13,   24,   24,   13,   -3,  -23,
-         -29,   -6,    9,   21,   21,    9,   -6,  -29,
-         -38,  -18,  -11,    1,    1,  -11,  -18,  -38,
-         -50,  -27,  -24,   -8,   -8,  -24,  -27,  -50,
-         -74,  -52,  -43,  -34,  -34,  -43,  -52,  -74,
-    ),
-
-    chess.KING: (
-          1,   45,   85,   76,   76,   85,   45,    1,
-         53,  100,  133,  135,  135,  133,  100,   53,
-         88,  130,  169,  175,  175,  169,  130,   88,
-        103,  156,  172,  172,  172,  172,  156,  103,
-         96,  166,  199,  199,  199,  199,  166,   96,
-         92,  172,  184,  191,  191,  184,  172,   92,
-         47,  121,  116,  131,  131,  116,  121,   47,
-         11,   59,   73,   78,   78,   73,   59,   11,
-    ),
-}
-
 PHASE_SCORES = {
     chess.PAWN: 0,
     chess.KNIGHT: 1,
@@ -304,7 +236,7 @@ def eval_PST1(board):
             score += PST_MG[i][square]
         for square in board.pieces(i, False):
             score -= PST_MG[i][chess.square_mirror(square)]
-    return int(round(score))
+    return score
 
 def eval_PST2(board):
     score = 0
@@ -340,7 +272,7 @@ def eval_PST2(board):
             eg_val = PST_EG[piece_type][m_sq]
             score -= (mg_val * mg_phase + eg_val * eg_phase)
 
-    return int(round(score))
+    return score
 
 
 # ------------- Search functions -------------
@@ -349,6 +281,7 @@ def eval_PST2(board):
 def quiescence(board, alpha, beta, evaluator, start_time, time_limit):
     global nodes_visited
     nodes_visited += 1
+    current_turn = board.turn
 
     if nodes_visited % 100 == 0:
         if time.time() - start_time > time_limit:
@@ -356,7 +289,7 @@ def quiescence(board, alpha, beta, evaluator, start_time, time_limit):
     
     stand_pat = evaluator(board)
 
-    if board.turn == chess.WHITE:
+    if current_turn == chess.WHITE:
         if stand_pat >= beta:
             return beta
         if alpha < stand_pat:
@@ -458,32 +391,32 @@ def minimax_select_move(board, depth, evaluator, time_limit):
     start_time = time.time()
     time_limit *= 0.95 #buffer
     turn = board.turn
-    alpha = NEG_INF
-    beta = POS_INF
+
+    for i in SCORES:
+        mg_contrib = sum(PST_MG[i][sq] for sq in board.pieces(i, chess.WHITE))
+        mg_contrib -= sum(PST_MG[i][chess.square_mirror(sq)] for sq in board.pieces(i, chess.BLACK))
+        print(f"DEBUG PST piece={i} mg_contrib={mg_contrib}", flush=True)
+    total_eval = evaluator(board)
+    print(f"DEBUG total eval={total_eval}", flush=True)
+
     move_evals = []
-    best_value = NEG_INF if turn else POS_INF
 
     try:
         for move in board.legal_moves:
             board.push(move)
             try:
-                val = default_minimax(board, depth - 1, alpha, beta, evaluator, start_time, time_limit)
+                # Evaluate each move with FULL window at root level to get true evaluations
+                val = default_minimax(board, depth - 1, NEG_INF, POS_INF, evaluator, start_time, time_limit)
             finally:
                 board.pop()
 
+            mat = sum(SCORES[i] * (len(board.pieces(i, True)) - len(board.pieces(i, False))) for i in SCORES)
+            print(f"DEBUG: {move.uci()} eval={val} material={mat}", flush=True)
             move_evals.append((move, val))
-
-            if turn:
-                if val > best_value:
-                    best_value = val
-                alpha = max(alpha, best_value)
-            else:
-                if val < best_value:
-                    best_value = val
-                beta = min(beta, best_value)
     except SearchTimeout:
         pass
 
+    print("info string DEBUG: MINIMAX move evaluations:", " ".join(f"{m.uci()}={v}" for m, v in move_evals), flush=True)
     return choose_from_move_evals(move_evals, turn, fallback_board=board, debug_tag="minimax_select_move")
 
 #--------------------------------------------------------
@@ -536,33 +469,22 @@ def iterative_deepening_minimax(board, depth, alpha, beta, evaluator, start_time
 
 def iterative_deepening_fixed_depth_search(board, depth, evaluator, start_time, time_limit, prev_best):
     turn = board.turn
-    alpha = NEG_INF
-    beta = POS_INF
-    best_value = NEG_INF if turn else POS_INF
     move_evals = []
     ordered_moves = iterative_deepening_order_moves(board, prev_best)
 
     for move in ordered_moves:
         if time.time() - start_time > time_limit:
             raise SearchTimeout()
-            
+
         board.push(move)
         try:
-            val = iterative_deepening_minimax(board, depth - 1, alpha, beta, evaluator, start_time, time_limit)
+            # Evaluate each move with FULL window at root level to get true evaluations
+            val = iterative_deepening_minimax(board, depth - 1, NEG_INF, POS_INF, evaluator, start_time, time_limit)
         finally:
             board.pop()
 
         move_evals.append((move, val))
 
-        if turn:
-            if val > best_value:
-                best_value = val
-            alpha = max(alpha, best_value)
-        else:
-            if val < best_value:
-                best_value = val
-            beta = min(beta, best_value)
-            
     return choose_from_move_evals(move_evals, turn, fallback_board=board, debug_tag=f"iterative_deepening_fixed_depth_search d={depth}")
 
 def iterative_deepening_search(board, depth, evaluator, time_limit):
@@ -648,32 +570,21 @@ def mvv_lva_select_move(board, depth, evaluator, time_limit):
     start_time = time.time()
     time_limit *= 0.95 #buffer
     turn = board.turn
-    alpha = NEG_INF
-    beta = POS_INF
     moves = list(board.legal_moves)
     moves.sort(key=lambda m: mvv_lva_score(board, m), reverse=True)
     move_evals = []
-    best_value = NEG_INF if turn else POS_INF
 
     try:
         for move in moves:
             board.push(move)
             try:
-                val = mvv_lva_minimax(board, depth - 1, alpha, beta, evaluator, start_time, time_limit)
+                # Evaluate each move with FULL window at root level to get true evaluations
+                val = mvv_lva_minimax(board, depth - 1, NEG_INF, POS_INF, evaluator, start_time, time_limit)
             finally:
                 board.pop()
 
             move_evals.append((move, val))
 
-            if turn:
-                if val > best_value:
-                    best_value = val
-                alpha = max(alpha, best_value)
-            else:
-                if val < best_value:
-                    best_value = val
-                beta = min(beta, best_value)
-                
     except SearchTimeout:
         pass
 
@@ -695,23 +606,24 @@ def tt_get_ordered_moves(board, tt_move=None):
     moves.sort(key=score_move, reverse=True)
     return moves
 
+def tt_store(board, depth, score, move, flag='EXACT'):
+    key = chess.polyglot.zobrist_hash(board)
+    if key not in TT or TT[key][0] < depth:
+        TT[key] = (depth, score, move, flag)
+
 def tt_lookup(board, depth):
     key = chess.polyglot.zobrist_hash(board)
     entry = TT.get(key)
     if entry:
-        stored_depth, score, move = entry
-        if stored_depth >= depth:
+        stored_depth, score, move, flag = entry
+        if stored_depth >= depth and flag == 'EXACT':
             return score, move
         return None, move
     return None, None
 
-def tt_store(board, depth, score, move):
-    key = chess.polyglot.zobrist_hash(board)
-    if key not in TT or TT[key][0] < depth:
-        TT[key] = (depth, score, move)
-
 def transposition_table_minimax(board, depth, alpha, beta, evaluator, start_time, time_limit):
     best_move_at_node = None
+    original_alpha = alpha
     # Time Check
     if time.time() - start_time > time_limit:
         raise SearchTimeout()
@@ -762,8 +674,16 @@ def transposition_table_minimax(board, depth, alpha, beta, evaluator, start_time
             if beta <= alpha:
                 break
     
+    # Determine flag
+    if value <= original_alpha:
+        flag = 'UPPER'  # failed low, score is an upper bound
+    elif value >= beta:
+        flag = 'LOWER'  # beta cutoff, score is a lower bound
+    else:
+        flag = 'EXACT'
+
     #TT store
-    tt_store(board, depth, value, best_move_at_node)
+    tt_store(board, depth, value, best_move_at_node, flag)
     return value
 
 def transposition_table_select_move(board, max_depth, evaluator, time_limit):
@@ -772,14 +692,18 @@ def transposition_table_select_move(board, max_depth, evaluator, time_limit):
     turn = board.turn
     ITERATIVE_DEEPENING = True
 
+    if board.fullmove_number == 1 and board.turn == chess.WHITE:
+        for move in list(board.legal_moves)[:5]:
+            board.push(move)
+            print(f"DEBUG direct eval {move.uci()} = {evaluator(board)}", flush=True)
+            board.pop()
+
     best_move_overall = None
     best_value = NEG_INF if turn else POS_INF
 
     if ITERATIVE_DEEPENING:
         try:
             for depth in range(1, max_depth + 1):
-                alpha = NEG_INF
-                beta = POS_INF
                 move_evals = []
 
                 _, tt_move = tt_lookup(board, depth)
@@ -788,56 +712,20 @@ def transposition_table_select_move(board, max_depth, evaluator, time_limit):
                 if not ordered_moves:
                     break
 
-                # PVS variables
-                first_child = True
-                best_move_this_depth = None
-                # reset per-depth
-                per_depth_best = NEG_INF if turn else POS_INF
-
                 for move in ordered_moves:
                     if time.time() - start_time > time_limit:
                         raise SearchTimeout()
 
                     board.push(move)
                     try:
-                        if first_child:
-                            # full-window search for first move -> establish baseline
-                            val = transposition_table_minimax(
-                                board, depth - 1, NEG_INF, POS_INF, evaluator, start_time, time_limit
-                            )
-                            first_child = False
-                        else:
-                            # null-window search around the current per_depth_best
-                            if turn:
-                                a, b = per_depth_best, per_depth_best + 1
-                            else:
-                                a, b = per_depth_best - 1, per_depth_best
-
-                            val = transposition_table_minimax(
-                                board, depth - 1, a, b, evaluator, start_time, time_limit
-                            )
-
-                            # if null-window indicates this move is better than current best, re-search full window
-                            if (turn and val > per_depth_best) or (not turn and val < per_depth_best):
-                                val = transposition_table_minimax(
-                                    board, depth - 1, NEG_INF, POS_INF, evaluator, start_time, time_limit
-                                )
+                        # Evaluate each move with FULL window at root level to get true evaluations
+                        val = transposition_table_minimax(
+                            board, depth - 1, NEG_INF, POS_INF, evaluator, start_time, time_limit
+                        )
                     finally:
                         board.pop()
 
                     move_evals.append((move, val))
-
-                    # update per-depth best and adjust alpha/beta
-                    if turn:
-                        if val > per_depth_best:
-                            per_depth_best = val
-                            best_move_this_depth = move
-                        alpha = max(alpha, per_depth_best)
-                    else:
-                        if val < per_depth_best:
-                            per_depth_best = val
-                            best_move_this_depth = move
-                        beta = min(beta, per_depth_best)
 
                 if not move_evals:
                     break
@@ -847,9 +735,6 @@ def transposition_table_select_move(board, max_depth, evaluator, time_limit):
                 values = [v for _, v in move_evals]
                 root_value = max(values) if turn else min(values)
                 chosen = choose_from_move_evals(move_evals, turn, fallback_board=board, debug_tag=f"transposition_table_select_move_iter depth={depth}")
-
-                if chosen is None and best_move_this_depth is not None:
-                    chosen = best_move_this_depth
 
                 # store result in TT and update best
                 if chosen is not None:
@@ -870,16 +755,10 @@ def transposition_table_select_move(board, max_depth, evaluator, time_limit):
             return None
 
     else:
-        # non-iterative fallback 
-        alpha = NEG_INF
-        beta = POS_INF
+        # non-iterative fallback
         move_evals = []
         _, good_move = tt_lookup(board, max_depth)
         ordered_moves = tt_get_ordered_moves(board, good_move)
-
-        first_child = True
-        per_depth_best = NEG_INF if turn else POS_INF
-        best_move_this_depth = None
 
         try:
             for move in ordered_moves:
@@ -887,32 +766,13 @@ def transposition_table_select_move(board, max_depth, evaluator, time_limit):
                     raise SearchTimeout()
                 board.push(move)
                 try:
-                    if first_child:
-                        val = transposition_table_minimax(board, max_depth - 1, NEG_INF, POS_INF, evaluator, start_time, time_limit)
-                        first_child = False
-                    else:
-                        if turn:
-                            a, b = per_depth_best, per_depth_best + 1
-                        else:
-                            a, b = per_depth_best - 1, per_depth_best
-                        val = transposition_table_minimax(board, max_depth - 1, a, b, evaluator, start_time, time_limit)
-                        if (turn and val > per_depth_best) or (not turn and val < per_depth_best):
-                            val = transposition_table_minimax(board, max_depth - 1, NEG_INF, POS_INF, evaluator, start_time, time_limit)
+                    # Evaluate each move with FULL window at root level to get true evaluations
+                    val = transposition_table_minimax(board, max_depth - 1, NEG_INF, POS_INF, evaluator, start_time, time_limit)
                 finally:
                     board.pop()
 
                 move_evals.append((move, val))
 
-                if turn:
-                    if val > per_depth_best:
-                        per_depth_best = val
-                        best_move_this_depth = move
-                    alpha = max(alpha, per_depth_best)
-                else:
-                    if val < per_depth_best:
-                        per_depth_best = val
-                        best_move_this_depth = move
-                    beta = min(beta, per_depth_best)
         except SearchTimeout:
             pass
 
@@ -925,7 +785,7 @@ def transposition_table_select_move(board, max_depth, evaluator, time_limit):
                 return None
 
         return choose_from_move_evals(move_evals, turn, fallback_board=board, debug_tag="transposition_table_select_move_non_iterative")
-    
+
 
 #-------------------------- ChessBot Class ------------------------------
 
