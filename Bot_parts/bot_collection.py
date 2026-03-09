@@ -12,7 +12,6 @@ else:
     CHOSEN_BOT = "C3" #Fallback
 
 print(f"info string KaarenBot version 1.0 initialized as {CHOSEN_BOT}")
-print(sys.argv[1])
 
 #1, 2, 3, 4 -- default minimax, mvv_lva, iterative deepening, transposition table + mvv-lva
 #A, B, C -- eval_material, eval_PST1, eval_PST2
@@ -23,17 +22,17 @@ PLAY = True
 TOL = 1  # Tolerance for near-best moves
 DEPTHS = {
     "A1": 2,
-    "A2": 4,
+    "A2": 3,
     "A3": 6,
-    "A4": 5,
+    "A4": 8,
     "B1": 2,
-    "B2": 4,
+    "B2": 3,
     "B3": 6,
-    "B4": 5,
+    "B4": 8,
     "C1": 2,
-    "C2": 4,
+    "C2": 3,
     "C3": 6,
-    "C4": 5,
+    "C4": 8,
 }
 MATE_SCORE = 100000
 NEG_INF = -99999
@@ -41,7 +40,10 @@ POS_INF = 99999
 board = chess.Board()
 move_times = []
 TT = {}
+MAX_TT_SIZE = 1_000_000
 nodes_visited = 0
+QUIESCENCE_DEPTH = 6
+
 
 SCORES = {
     # AlphaZero (2020) piece values 
@@ -278,7 +280,7 @@ def eval_PST2(board):
 # ------------- Search functions -------------
 
 
-def quiescence(board, alpha, beta, evaluator, start_time, time_limit):
+def quiescence(board, alpha, beta, evaluator, start_time, time_limit, qdepth=QUIESCENCE_DEPTH):
     global nodes_visited
     nodes_visited += 1
     current_turn = board.turn
@@ -289,6 +291,10 @@ def quiescence(board, alpha, beta, evaluator, start_time, time_limit):
     
     stand_pat = evaluator(board)
 
+    # Limit quiescence depth
+    if qdepth == 0:
+        return stand_pat
+    
     if current_turn == chess.WHITE:
         if stand_pat >= beta:
             return beta
@@ -303,7 +309,7 @@ def quiescence(board, alpha, beta, evaluator, start_time, time_limit):
     for move in board.generate_legal_captures():
         board.push(move)
         try:
-            score = quiescence(board, alpha, beta, evaluator, start_time, time_limit)
+            score = quiescence(board, alpha, beta, evaluator, start_time, time_limit, qdepth-1)
         finally:
             board.pop()
         if board.turn == chess.WHITE:
@@ -513,7 +519,7 @@ def mvv_lva_score(board, move):
         return 10000 + 100 * MOVE_ORDERING_SCORES.get(move.promotion, 0)
     
     if board.is_en_passant(move):
-        return 8000
+        return 1000
     
     if board.is_capture(move):
         victim = board.piece_at(move.to_square)
@@ -608,7 +614,10 @@ def tt_get_ordered_moves(board, tt_move=None):
 
 def tt_store(board, depth, score, move, flag='EXACT'):
     key = chess.polyglot.zobrist_hash(board)
-    if key not in TT or TT[key][0] < depth:
+    if len(TT) >= MAX_TT_SIZE and key not in TT:
+        # Evict entry
+        TT.pop(next(iter(TT)))
+    if key not in TT or TT[key][0] <= depth:
         TT[key] = (depth, score, move, flag)
 
 def tt_lookup(board, depth):
