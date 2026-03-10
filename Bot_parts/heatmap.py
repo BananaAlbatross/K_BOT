@@ -133,13 +133,13 @@ PIECE_NAMES   = ["Ettur", "Ratsu", "Oda", "Vanker", "Lipp", "Kuningas"]
 PIECE_KEYS    = [chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN, chess.KING]
 
 FILE_LABELS = list("abcdefgh")
-RANK_LABELS = list("87654321")  # rank 8 at top
+RANK_LABELS = list("87654321")
 
 def pst_to_grid(pst_tuple):
     return np.array(pst_tuple, dtype=float).reshape(8, 8)
 
 def plot_pst_group(pst_dict, group_title, cmap, filename):
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    fig, axes = plt.subplots(3, 2, figsize=(10, 15))
     fig.patch.set_facecolor("#1a1a2e")
 
     fig.suptitle(group_title, fontsize=22, fontweight="bold",
@@ -193,6 +193,6 @@ plot_pst_group(
 plot_pst_group(
     PST_EG,
     "Lõppmängu nupp-ruutlauad",
-    cmap="coolwarm",
+    cmap="RdYlGn", #Enne oli coolwarm
     filename="C:/Users/Kaare/Desktop/pst_endgame.png",
 )
