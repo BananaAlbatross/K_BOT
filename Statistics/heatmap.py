@@ -155,7 +155,7 @@ def plot_pst_group(pst_dict, group_title, cmap, filename):
         for r in range(8):
             for c in range(8):
                 val = grid[r, c]
-                color = "black"
+                color = "white" if abs(val) < vmax * 0.4 else ("black" if val > 0 else "white")
                 ax.text(c, r, f"{int(val):+d}", ha="center", va="center",
                         fontsize=8.5, color=color, fontweight="bold",
                         fontfamily="DejaVu Sans Mono")
