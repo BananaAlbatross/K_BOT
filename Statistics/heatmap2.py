@@ -3,11 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import copy
 
-A4_also = False
+A4_also = True
 save_folder = "C:/Users/Kaare/Desktop/UT/Andmed"  # <-- change this
+CELL_FONTSIZE = 14
 
 df = pd.read_csv("C:/Users/Kaare/Desktop/UT/Andmed/tournament_results.csv")
-    
+
+print(df["Score"].dtype)
+print(df["Score"].head(10))
+
 if not A4_also:
     df = df[df["Player1"].str.contains("A[123]|B[123]|C[123]", regex=True) &
         df["Player2"].str.contains("A[123]|B[123]|C[123]", regex=True)]
@@ -38,7 +42,7 @@ for _, row in df.iterrows():
     Score.loc[p2, p1]    = 100 - score
 
 def plot_heatmap(matrix, title, cmap_name, filename):
-    cmap = copy(plt.cm.get_cmap(cmap_name))
+    cmap = copy(plt.colormaps[cmap_name])
     cmap.set_bad(color="#dddddd")
 
     fig, ax = plt.subplots(figsize=(10, 8))
@@ -56,7 +60,7 @@ def plot_heatmap(matrix, title, cmap_name, filename):
             val = matrix.iloc[i, j]
             if not np.isnan(val):
                 ax.text(j, i, f"{val:.0f}",
-                        ha="center", va="center", fontsize=7)
+                        ha="center", va="center", fontsize=CELL_FONTSIZE)
 
     plt.colorbar(im, ax=ax)
     plt.tight_layout()
